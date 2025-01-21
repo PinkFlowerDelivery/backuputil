@@ -1,6 +1,7 @@
 use clap::Command;
 
 pub mod make;
+pub mod clear;
 
 pub fn build_cli() -> Command {
     Command::new("backu")
@@ -19,4 +20,5 @@ Author: {author}
 Version: {version}
 ")  
         .subcommand(make::make_command())
+        .subcommand(clear::clear_command())
 }

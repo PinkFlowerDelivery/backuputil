@@ -28,7 +28,12 @@ async fn main() {
                 error!("Argument NAME not found."); 
             }
         }
+        Some(("clear", _)) => {
+            modules::clear::clear_handle().await;
+            debug!("[Clear] Laucnhed...");
+        }
 
         _ => warn!("Command not found"),
     }
 }
+
