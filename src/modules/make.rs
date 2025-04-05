@@ -1,8 +1,8 @@
 use clap::{Command, Arg};
 use tokio::fs;
-use tracing::{info, error, debug};
 use std::path::PathBuf;
 
+use crate::errors;
 
 pub fn make_command() -> Command {
     Command::new("make")
@@ -19,30 +19,22 @@ pub fn make_command() -> Command {
             )
 }
 
-pub async fn make_handle(name: &str, ignoredot: bool) {
+pub async fn make_handle(name: &str, ignoredot: bool) -> Result<(), errors::Errors> {
     let pathbuf: PathBuf = PathBuf::from(name);
     let homedir = dirs::home_dir().unwrap();
     let fmthomedir = homedir.to_string_lossy();
 
     if pathbuf.is_dir() {
-        if let Err(_) = fs::create_dir(format!("{}/backups/{}", &fmthomedir, name)).await {
-            error!("Failed to create backup :c");
-        }
-        backup_dir(pathbuf, name, ignoredot);
-        debug!("Back up dir function working!");
-
+        fs::create_dir(format!("{}/backups/{}", &fmthomedir, name)).await?;
+        backup_dir(pathbuf, name, ignoredot)?;
     } else if pathbuf.is_file() {
-        if let Err(_) = fs::copy(name, format!("{}/backups/{}", &fmthomedir, name)).await {
-            error!("Failed to create backup :c");
-        }
-        debug!("Back up file function working!");
-    } else {
-        error!("Failed...");
+        fs::copy(name, format!("{}/backups/{}", &fmthomedir, name)).await?; 
     }
-    info!("Backup succefully created.");
+    println!("Successfully");
+    Ok(())
 }
 
-fn backup_dir(path: PathBuf, name: &str, ignoredot: bool) {
+fn backup_dir(path: PathBuf, name: &str, ignoredot: bool) -> Result<(), errors::Errors> {
     let dir = std::fs::read_dir(&path).unwrap();
     let homedir = dirs::home_dir().unwrap();
     let fmthomedir = homedir.to_string_lossy();
@@ -54,20 +46,17 @@ fn backup_dir(path: PathBuf, name: &str, ignoredot: bool) {
         if ignoredot && entry.file_name().to_string_lossy().starts_with('.') {
             continue;
         }
-        
+
         if file.is_file() {
-            if let Err(_) = std::fs::copy(&file, format!("{}/backups/{}", &fmthomedir, &file.display())) {
-                error!("Failed to copy files.");
-            }
+            std::fs::copy(&file, format!("{}/backups/{}", &fmthomedir, &file.display()))?;
         }
 
-    if file.is_dir() {
-        if let Err(_) = std::fs::create_dir(format!("{}/backups/{}", &fmthomedir, &file.display())) {
-            error!("Failed to copy dirs.");
-        } 
-        backup_dir(file, name, ignoredot);
+        if file.is_dir() {
+            std::fs::create_dir(format!("{}/backups/{}", &fmthomedir, &file.display()))?;
+            backup_dir(file, name, ignoredot)?;
+        }
     }
-}
+    Ok(())
 }
 
 

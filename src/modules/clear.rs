@@ -1,6 +1,7 @@
 use clap::Command;
 use tokio::fs;
-use tracing::{info, error, debug};
+
+use crate::errors;
 
 pub fn clear_command() -> Command {
     Command::new("clear")
@@ -8,27 +9,22 @@ pub fn clear_command() -> Command {
         .about("Clear backup dir")
 }
 
-pub async fn clear_handle() {
+pub async fn clear_handle() -> Result<(), errors::Errors> {
     let homedir = dirs::home_dir().unwrap();
     let fmthomedir = homedir.to_string_lossy();
 
     let mut backupdir = fs::read_dir(format!("{}/backups/", &fmthomedir)).await.unwrap(); 
-    debug!("DIR | {:?}", backupdir);
 
-    while let Some(entry) = backupdir.next_entry().await.unwrap() {
+    while let Some(entry) = backupdir.next_entry().await? {
          let file = entry.path();
 
         if file.is_dir() {
-            if let Err(e) = fs::remove_dir_all(&file).await {
-                error!("Failed to remove dir {}", e);
-            }
+            fs::remove_dir_all(&file).await?
         } else {
-            if let Err(_) = fs::remove_file(&file).await {
-                error!("Failed to remove file");
-            }
+            fs::remove_file(&file).await?
         }
        
     }
-
-    info!("Backup cleared!");
+    println!("Successfully");
+    Ok(())
 }
